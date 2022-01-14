@@ -1,3 +1,4 @@
+import { encode } from "@msgpack/msgpack";
 import Net, { Socket } from 'net';
 import ConnectedClient from './ConnectedClient';
 import Packet, { PacketType } from './Packet';
@@ -54,7 +55,7 @@ export default class Server {
     // @NOTE: Properly handle packet types extending from Packet interface.
     private SendToAllClients(packet: any): void {
         this._connectedClients.forEach((client) => {
-            client.Socket.write(Buffer.from(JSON.stringify(packet)));
+            client.Socket.write(encode(packet));
         });
     }
 }
