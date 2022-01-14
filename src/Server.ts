@@ -1,7 +1,7 @@
-import { encode } from "@msgpack/msgpack";
 import Net, { Socket } from 'net';
 import ConnectedClient from './ConnectedClient';
-import Packet, { PacketType } from './Packet';
+import { PacketType } from './Packet';
+import { TransformWithId } from './Transform';
 
 export default class Server {
     private _connectedClients: Map<number, ConnectedClient>;
@@ -44,8 +44,26 @@ export default class Server {
         // Send incoming player data to existing clients.
         this.SendToAllClients({
             header: PacketType.PlayerTransform,
-            X: client.Transform.X,
-            Y: client.Transform.Y
+            transform: {
+                ID: client.ID,
+                X: client.Transform.X,
+                Y: client.Transform.Y
+            }
+        });
+
+        // Send existing players to new client.
+        const transforms: TransformWithId[] = [];
+        this._connectedClients.forEach((client, key) => {
+            transforms.push({ ID: key, X: client.Transform.X, Y: client.Transform.Y });
+        });
+        client.SendPacket({ header: PacketType.PlayerList, players: transforms });
+        client.SendPacket({
+            header: PacketType.PlayerTransform,
+            transform: {
+                ID: client.ID,
+                X: client.Transform.X,
+                Y: client.Transform.Y
+            }
         });
 
         // Add new client to list of connected clients.
@@ -55,7 +73,7 @@ export default class Server {
     // @NOTE: Properly handle packet types extending from Packet interface.
     private SendToAllClients(packet: any): void {
         this._connectedClients.forEach((client) => {
-            client.Socket.write(encode(packet));
+            client.SendPacket(packet);
         });
     }
 }
